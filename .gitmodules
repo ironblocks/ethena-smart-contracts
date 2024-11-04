@@ -1,3 +1,6 @@
 [submodule "contracts/lib/ironblocks/onchain-firewall"]
 	path = contracts/lib/ironblocks/onchain-firewall
 	url = https://github.com/ironblocks/onchain-firewall
+[submodule "contracts/lib/openzeppelin-contracts"]
+	path = contracts/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
