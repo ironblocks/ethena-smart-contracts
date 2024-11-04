@@ -1,0 +1,3 @@
+[submodule "contracts/lib/ironblocks/onchain-firewall"]
+	path = contracts/lib/ironblocks/onchain-firewall
+	url = https://github.com/ironblocks/onchain-firewall
