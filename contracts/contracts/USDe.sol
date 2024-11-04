@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.20;
 
+import {VennFirewallConsumer} from "@ironblocks/firewall-consumer/contracts/consumers/VennFirewallConsumer.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
@@ -11,7 +12,7 @@ import "./interfaces/IUSDeDefinitions.sol";
  * @title USDe
  * @notice USDe Genesis Story: Arthur Hayes' $Nakadollar in "Dust on Crust" 08/03/2023
  */
-contract USDe is Ownable2Step, ERC20Burnable, ERC20Permit, IUSDeDefinitions {
+contract USDe is VennFirewallConsumer, Ownable2Step, ERC20Burnable, ERC20Permit, IUSDeDefinitions {
   address public minter;
 
   constructor(address admin) ERC20("USDe", "USDe") ERC20Permit("USDe") {
@@ -19,12 +20,12 @@ contract USDe is Ownable2Step, ERC20Burnable, ERC20Permit, IUSDeDefinitions {
     _transferOwnership(admin);
   }
 
-  function setMinter(address newMinter) external onlyOwner {
+  function setMinter(address newMinter) external onlyOwner firewallProtected {
     emit MinterUpdated(newMinter, minter);
     minter = newMinter;
   }
 
-  function mint(address to, uint256 amount) external {
+  function mint(address to, uint256 amount) external firewallProtected {
     if (msg.sender != minter) revert OnlyMinter();
     _mint(to, amount);
   }

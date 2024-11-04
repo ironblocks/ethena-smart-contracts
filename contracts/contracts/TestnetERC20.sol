@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
+import {VennFirewallConsumer} from "@ironblocks/firewall-consumer/contracts/consumers/VennFirewallConsumer.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
@@ -9,7 +10,7 @@ import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC2
  * @title TestnetERC20
  * @dev ERC20 minting logic
  */
-contract TestnetERC20 is IERC20Permit, ERC20, Ownable {
+contract TestnetERC20 is VennFirewallConsumer, IERC20Permit, ERC20, Ownable {
   bytes public constant EIP712_REVISION = bytes("1");
   bytes32 internal constant EIP712_DOMAIN =
     keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -35,6 +36,7 @@ contract TestnetERC20 is IERC20Permit, ERC20, Ownable {
   function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
     external
     override
+    firewallProtected
   {
     require(owner != address(0), "INVALID_OWNER");
     //solium-disable-next-line

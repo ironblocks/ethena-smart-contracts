@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.20;
 
+import {VennFirewallConsumer} from "@ironblocks/firewall-consumer/contracts/consumers/VennFirewallConsumer.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
@@ -11,7 +12,7 @@ import "./interfaces/IENADefinitions.sol";
  * @title ENA
  * @notice Governance token for the Ethena protocol
  */
-contract ENA is Ownable2Step, ERC20Burnable, ERC20Permit, IENADefinitions {
+contract ENA is VennFirewallConsumer, Ownable2Step, ERC20Burnable, ERC20Permit, IENADefinitions {
   /// @notice Maximum inflation rate per year (percentage) expressed as an integer
   uint8 public constant MAX_INFLATION = 10;
 
@@ -39,7 +40,7 @@ contract ENA is Ownable2Step, ERC20Burnable, ERC20Permit, IENADefinitions {
    * @param amount The amount of tokens to mint
    * @dev Only callable by the owner once per year and amount must be less than max inflation rate
    */
-  function mint(address to, uint256 amount) external onlyOwner {
+  function mint(address to, uint256 amount) external onlyOwner firewallProtected {
     if (block.timestamp - lastMintTimestamp < MINT_WAIT_PERIOD) revert MintWaitPeriodInProgress();
     uint256 _maxInflationAmount = totalSupply() * MAX_INFLATION / 100;
     if (amount > _maxInflationAmount) revert MaxInflationExceeded();

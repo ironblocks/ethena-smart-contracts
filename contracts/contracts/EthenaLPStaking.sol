@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.20;
 
+import {VennFirewallConsumer} from "@ironblocks/firewall-consumer/contracts/consumers/VennFirewallConsumer.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -15,7 +16,7 @@ import "./interfaces/IEthenaLPStakingDefinitions.sol";
  * cooldown period on withdrawing stakes.
  */
 
-contract EthenaLPStaking is Ownable2Step, IEthenaLPStakingDefinitions, ReentrancyGuard {
+contract EthenaLPStaking is VennFirewallConsumer, Ownable2Step, IEthenaLPStakingDefinitions, ReentrancyGuard {
   using SafeERC20 for IERC20;
 
   // ---------------------- Constants -----------------------
@@ -61,7 +62,7 @@ contract EthenaLPStaking is Ownable2Step, IEthenaLPStakingDefinitions, Reentranc
    * @notice owner can change epoch
    * @param newEpoch the new epoch
    */
-  function setEpoch(uint8 newEpoch) external onlyOwner {
+  function setEpoch(uint8 newEpoch) external onlyOwner firewallProtected {
     if (newEpoch == currentEpoch) revert InvalidEpoch();
     emit NewEpoch(newEpoch, currentEpoch);
     currentEpoch = newEpoch;
@@ -74,7 +75,7 @@ contract EthenaLPStaking is Ownable2Step, IEthenaLPStakingDefinitions, Reentranc
    * @param stakeLimit the maximum amount of LP tokens that can be staked
    * @param cooldown the cooldown period for withdrawing LP tokens
    */
-  function updateStakeParameters(address token, uint8 epoch, uint248 stakeLimit, uint48 cooldown) external onlyOwner {
+  function updateStakeParameters(address token, uint8 epoch, uint248 stakeLimit, uint48 cooldown) external onlyOwner firewallProtected {
     if (cooldown > _MAX_COOLDOWN_PERIOD) revert MaxCooldownExceeded();
     StakeParameters storage stakeParameters = stakeParametersByToken[token];
     // owner cannot modify total staked or cooling down
@@ -90,7 +91,7 @@ contract EthenaLPStaking is Ownable2Step, IEthenaLPStakingDefinitions, Reentranc
    * @param to the address to send the tokens to
    * @param amount the amount of tokens to send
    */
-  function rescueTokens(address token, address to, uint256 amount) external onlyOwner nonReentrant checkAmount(amount) {
+  function rescueTokens(address token, address to, uint256 amount) external onlyOwner nonReentrant checkAmount(amount) firewallProtected {
     if (to == address(0)) revert ZeroAddressException();
     // contract should never hold ETH
     if (token == _ETH_ADDRESS) {
@@ -115,7 +116,7 @@ contract EthenaLPStaking is Ownable2Step, IEthenaLPStakingDefinitions, Reentranc
    * @param token the LP token to stake
    * @param amount the amount of LP tokens to stake
    */
-  function stake(address token, uint104 amount) external nonReentrant checkAmount(amount) {
+  function stake(address token, uint104 amount) external nonReentrant checkAmount(amount) firewallProtected {
     StakeParameters storage stakeParameters = stakeParametersByToken[token];
     // can only stake when it is the correct epoch
     if (currentEpoch != stakeParameters.epoch) revert InvalidEpoch();
@@ -133,7 +134,7 @@ contract EthenaLPStaking is Ownable2Step, IEthenaLPStakingDefinitions, Reentranc
    * @param token the LP token to unstake
    * @param amount the amount of LP tokens to unstake
    */
-  function unstake(address token, uint104 amount) external nonReentrant checkAmount(amount) {
+  function unstake(address token, uint104 amount) external nonReentrant checkAmount(amount) firewallProtected {
     StakeParameters storage stakeParameters = stakeParametersByToken[token];
     StakeData storage stakeData = stakes[msg.sender][token];
     if (stakeData.stakedAmount < amount) revert InvalidAmount();
@@ -151,7 +152,7 @@ contract EthenaLPStaking is Ownable2Step, IEthenaLPStakingDefinitions, Reentranc
    * @param token the LP token to withdraw
    * @param amount the amount of LP tokens to withdraw
    */
-  function withdraw(address token, uint104 amount) external nonReentrant checkAmount(amount) {
+  function withdraw(address token, uint104 amount) external nonReentrant checkAmount(amount) firewallProtected {
     StakeParameters storage stakeParameters = stakeParametersByToken[token];
     StakeData storage stakeData = stakes[msg.sender][token];
     if (stakeData.coolingDownAmount < amount) revert InvalidAmount();

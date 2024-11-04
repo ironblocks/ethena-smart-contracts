@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.20;
 
+import {VennFirewallConsumer} from "@ironblocks/firewall-consumer/contracts/consumers/VennFirewallConsumer.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -21,7 +22,7 @@ import "./interfaces/IStakingRewardsDistributor.sol";
  *        in this contract and calling transferInRewards to send the minted USDe rewards to the staking contract. The operator
  *        can be replaced by the owner at any time with a single transaction.
  */
-contract StakingRewardsDistributor is Ownable2Step, IStakingRewardsDistributor, ReentrancyGuard {
+contract StakingRewardsDistributor is VennFirewallConsumer, Ownable2Step, IStakingRewardsDistributor, ReentrancyGuard {
   using SafeERC20 for IERC20;
 
   // ---------------------- Constants -----------------------
@@ -85,7 +86,7 @@ contract StakingRewardsDistributor is Ownable2Step, IStakingRewardsDistributor, 
    * @dev In order to use this function, we need to set this contract as the REWARDER_ROLE in the staking contract
    *      No need to check that the input amount is not 0, since we already check this in the staking contract
    */
-  function transferInRewards(uint256 _rewardsAmount) external {
+  function transferInRewards(uint256 _rewardsAmount) external firewallProtected {
     if (msg.sender != operator) revert OnlyOperator();
 
     // Check that this contract holds enough USDe balance to transfer
@@ -101,7 +102,7 @@ contract StakingRewardsDistributor is Ownable2Step, IStakingRewardsDistributor, 
    * @param _amount the amount of tokens to send
    * @dev only available for the owner
    */
-  function rescueTokens(address _token, address _to, uint256 _amount) external nonReentrant onlyOwner {
+  function rescueTokens(address _token, address _to, uint256 _amount) external nonReentrant onlyOwner firewallProtected {
     if (_token == address(0)) revert InvalidZeroAddress();
     if (_to == address(0)) revert InvalidZeroAddress();
     if (_amount == 0) revert InvalidAmount();
@@ -121,7 +122,7 @@ contract StakingRewardsDistributor is Ownable2Step, IStakingRewardsDistributor, 
    * @param _newMintingContract new minting contract
    * @dev only available for the owner, high probability that this function never gets called
    */
-  function setMintingContract(EthenaMinting _newMintingContract) external onlyOwner {
+  function setMintingContract(EthenaMinting _newMintingContract) external onlyOwner firewallProtected {
     if (address(_newMintingContract) == address(0)) revert InvalidZeroAddress();
     emit MintingContractUpdated(address(_newMintingContract), address(mintContract));
     mintContract = _newMintingContract;
@@ -148,7 +149,7 @@ contract StakingRewardsDistributor is Ownable2Step, IStakingRewardsDistributor, 
    * @param _target address to revoke the approvals from
    * @dev only available for the owner. Can't revoke the approvals from the current minting contract
    */
-  function revokeApprovals(address[] memory _assets, address _target) external onlyOwner {
+  function revokeApprovals(address[] memory _assets, address _target) external onlyOwner firewallProtected {
     if (_assets.length == 0) revert NoAssetsProvided();
     if (_target == address(0)) revert InvalidZeroAddress();
     if (_target == address(mintContract)) revert InvalidAddressCurrentMintContract();

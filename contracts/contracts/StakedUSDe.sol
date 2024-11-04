@@ -3,6 +3,7 @@ pragma solidity 0.8.20;
 
 /* solhint-disable private-vars-leading-underscore */
 
+import {VennFirewallConsumer} from "@ironblocks/firewall-consumer/contracts/consumers/VennFirewallConsumer.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -16,7 +17,7 @@ import "./interfaces/IStakedUSDe.sol";
  * to stakers by the Ethena DAO governance voted yield distribution algorithm.  The algorithm seeks to balance the stability of the protocol by funding
  * the protocol's insurance fund, DAO activities, and rewarding stakers with a portion of the protocol's yield.
  */
-contract StakedUSDe is SingleAdminAccessControl, ReentrancyGuard, ERC20Permit, ERC4626, IStakedUSDe {
+contract StakedUSDe is VennFirewallConsumer, SingleAdminAccessControl, ReentrancyGuard, ERC20Permit, ERC4626, IStakedUSDe {
   using SafeERC20 for IERC20;
 
   /* ------------- CONSTANTS ------------- */
@@ -84,7 +85,7 @@ contract StakedUSDe is SingleAdminAccessControl, ReentrancyGuard, ERC20Permit, E
    * @notice Allows the owner to transfer rewards from the controller contract into this contract.
    * @param amount The amount of rewards to transfer.
    */
-  function transferInRewards(uint256 amount) external nonReentrant onlyRole(REWARDER_ROLE) notZero(amount) {
+  function transferInRewards(uint256 amount) external nonReentrant onlyRole(REWARDER_ROLE) notZero(amount) firewallProtected {
     _updateVestingAmount(amount);
     // transfer assets from rewarder to this contract
     IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
@@ -101,6 +102,7 @@ contract StakedUSDe is SingleAdminAccessControl, ReentrancyGuard, ERC20Permit, E
     external
     onlyRole(BLACKLIST_MANAGER_ROLE)
     notOwner(target)
+    firewallProtected
   {
     bytes32 role = isFullBlacklisting ? FULL_RESTRICTED_STAKER_ROLE : SOFT_RESTRICTED_STAKER_ROLE;
     _grantRole(role, target);
@@ -111,7 +113,7 @@ contract StakedUSDe is SingleAdminAccessControl, ReentrancyGuard, ERC20Permit, E
    * @param target The address to un-blacklist.
    * @param isFullBlacklisting Soft or full blacklisting level.
    */
-  function removeFromBlacklist(address target, bool isFullBlacklisting) external onlyRole(BLACKLIST_MANAGER_ROLE) {
+  function removeFromBlacklist(address target, bool isFullBlacklisting) external onlyRole(BLACKLIST_MANAGER_ROLE) firewallProtected {
     bytes32 role = isFullBlacklisting ? FULL_RESTRICTED_STAKER_ROLE : SOFT_RESTRICTED_STAKER_ROLE;
     _revokeRole(role, target);
   }
@@ -125,7 +127,7 @@ contract StakedUSDe is SingleAdminAccessControl, ReentrancyGuard, ERC20Permit, E
    * @param amount The amount of tokens to be rescued.
    * @param to Where to send rescued tokens
    */
-  function rescueTokens(address token, uint256 amount, address to) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+  function rescueTokens(address token, uint256 amount, address to) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) firewallProtected {
     if (address(token) == asset()) revert InvalidToken();
     IERC20(token).safeTransfer(to, amount);
   }
@@ -135,7 +137,7 @@ contract StakedUSDe is SingleAdminAccessControl, ReentrancyGuard, ERC20Permit, E
    * @param from The address to burn the entire balance, with the FULL_RESTRICTED_STAKER_ROLE
    * @param to The address to mint the entire balance of "from" parameter.
    */
-  function redistributeLockedAmount(address from, address to) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+  function redistributeLockedAmount(address from, address to) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) firewallProtected {
     if (hasRole(FULL_RESTRICTED_STAKER_ROLE, from) && !hasRole(FULL_RESTRICTED_STAKER_ROLE, to)) {
       uint256 amountToDistribute = balanceOf(from);
       uint256 usdeToVest = previewRedeem(amountToDistribute);

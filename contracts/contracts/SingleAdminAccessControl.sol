@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.20;
 
+import {VennFirewallConsumer} from "@ironblocks/firewall-consumer/contracts/consumers/VennFirewallConsumer.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/interfaces/IERC5313.sol";
 import "./interfaces/ISingleAdminAccessControl.sol";
@@ -10,7 +11,7 @@ import "./interfaces/ISingleAdminAccessControl.sol";
  * @notice SingleAdminAccessControl is a contract that provides a single admin role
  * @notice This contract is a simplified alternative to OpenZeppelin's AccessControlDefaultAdminRules
  */
-abstract contract SingleAdminAccessControl is IERC5313, ISingleAdminAccessControl, AccessControl {
+abstract contract SingleAdminAccessControl is VennFirewallConsumer, IERC5313, ISingleAdminAccessControl, AccessControl {
   address private _currentDefaultAdmin;
   address private _pendingDefaultAdmin;
 
@@ -22,13 +23,13 @@ abstract contract SingleAdminAccessControl is IERC5313, ISingleAdminAccessContro
   /// @notice Transfer the admin role to a new address
   /// @notice This can ONLY be executed by the current admin
   /// @param newAdmin address
-  function transferAdmin(address newAdmin) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  function transferAdmin(address newAdmin) external onlyRole(DEFAULT_ADMIN_ROLE) firewallProtected {
     if (newAdmin == msg.sender) revert InvalidAdminChange();
     _pendingDefaultAdmin = newAdmin;
     emit AdminTransferRequested(_currentDefaultAdmin, newAdmin);
   }
 
-  function acceptAdmin() external {
+  function acceptAdmin() external firewallProtected {
     if (msg.sender != _pendingDefaultAdmin) revert NotPendingAdmin();
     _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
   }

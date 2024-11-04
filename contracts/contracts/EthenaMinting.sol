@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 /* solhint-disable private-vars-leading-underscore */
 /* solhint-disable var-name-mixedcase */
 
+import {VennFirewallConsumer} from "@ironblocks/firewall-consumer/contracts/consumers/VennFirewallConsumer.sol";
 import "./SingleAdminAccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -18,7 +19,7 @@ import "./interfaces/IWETH9.sol";
  * @title Ethena Minting
  * @notice This contract mints and redeems USDe, the first staked Ethereum delta-neutral backed synthetic dollar
  */
-contract EthenaMinting is IEthenaMinting, SingleAdminAccessControl, ReentrancyGuard {
+contract EthenaMinting is VennFirewallConsumer, IEthenaMinting, SingleAdminAccessControl, ReentrancyGuard {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -182,6 +183,7 @@ contract EthenaMinting is IEthenaMinting, SingleAdminAccessControl, ReentrancyGu
     nonReentrant
     onlyRole(MINTER_ROLE)
     belowMaxMintPerBlock(order.usde_amount)
+    firewallProtected
   {
     if (order.order_type != OrderType.MINT) revert InvalidOrder();
     verifyOrder(order, signature);
@@ -213,6 +215,7 @@ contract EthenaMinting is IEthenaMinting, SingleAdminAccessControl, ReentrancyGu
     nonReentrant
     onlyRole(MINTER_ROLE)
     belowMaxMintPerBlock(order.usde_amount)
+    firewallProtected
   {
     if (order.order_type != OrderType.MINT) revert InvalidOrder();
     verifyOrder(order, signature);
@@ -246,6 +249,7 @@ contract EthenaMinting is IEthenaMinting, SingleAdminAccessControl, ReentrancyGu
     nonReentrant
     onlyRole(REDEEMER_ROLE)
     belowMaxRedeemPerBlock(order.usde_amount)
+    firewallProtected
   {
     if (order.order_type != OrderType.REDEEM) revert InvalidOrder();
     verifyOrder(order, signature);
@@ -265,29 +269,29 @@ contract EthenaMinting is IEthenaMinting, SingleAdminAccessControl, ReentrancyGu
   }
 
   /// @notice Sets the max mintPerBlock limit
-  function setMaxMintPerBlock(uint256 _maxMintPerBlock) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  function setMaxMintPerBlock(uint256 _maxMintPerBlock) external onlyRole(DEFAULT_ADMIN_ROLE) firewallProtected {
     _setMaxMintPerBlock(_maxMintPerBlock);
   }
 
   /// @notice Sets the max redeemPerBlock limit
-  function setMaxRedeemPerBlock(uint256 _maxRedeemPerBlock) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  function setMaxRedeemPerBlock(uint256 _maxRedeemPerBlock) external onlyRole(DEFAULT_ADMIN_ROLE) firewallProtected {
     _setMaxRedeemPerBlock(_maxRedeemPerBlock);
   }
 
   /// @notice Disables the mint and redeem
-  function disableMintRedeem() external onlyRole(GATEKEEPER_ROLE) {
+  function disableMintRedeem() external onlyRole(GATEKEEPER_ROLE) firewallProtected {
     _setMaxMintPerBlock(0);
     _setMaxRedeemPerBlock(0);
   }
 
   /// @notice Enables smart contracts to delegate an address for signing
-  function setDelegatedSigner(address _delegateTo) external {
+  function setDelegatedSigner(address _delegateTo) external firewallProtected {
     delegatedSigner[_delegateTo][msg.sender] = DelegatedSignerStatus.PENDING;
     emit DelegatedSignerInitiated(_delegateTo, msg.sender);
   }
 
   /// @notice The delegated address to confirm delegation
-  function confirmDelegatedSigner(address _delegatedBy) external {
+  function confirmDelegatedSigner(address _delegatedBy) external firewallProtected {
     if (delegatedSigner[msg.sender][_delegatedBy] != DelegatedSignerStatus.PENDING) {
       revert DelegationNotInitiated();
     }
@@ -296,7 +300,7 @@ contract EthenaMinting is IEthenaMinting, SingleAdminAccessControl, ReentrancyGu
   }
 
   /// @notice Enables smart contracts to undelegate an address for signing
-  function removeDelegatedSigner(address _removedSigner) external {
+  function removeDelegatedSigner(address _removedSigner) external firewallProtected {
     delegatedSigner[_removedSigner][msg.sender] = DelegatedSignerStatus.REJECTED;
     emit DelegatedSignerRemoved(_removedSigner, msg.sender);
   }
@@ -306,6 +310,7 @@ contract EthenaMinting is IEthenaMinting, SingleAdminAccessControl, ReentrancyGu
     external
     nonReentrant
     onlyRole(COLLATERAL_MANAGER_ROLE)
+    firewallProtected
   {
     if (wallet == address(0) || !_custodianAddresses.contains(wallet)) revert InvalidAddress();
     if (asset == NATIVE_TOKEN) {
@@ -318,7 +323,7 @@ contract EthenaMinting is IEthenaMinting, SingleAdminAccessControl, ReentrancyGu
   }
 
   /// @notice Removes an asset from the supported assets list
-  function removeSupportedAsset(address asset) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  function removeSupportedAsset(address asset) external onlyRole(DEFAULT_ADMIN_ROLE) firewallProtected {
     if (!_supportedAssets.remove(asset)) revert InvalidAssetAddress();
     emit AssetRemoved(asset);
   }
@@ -329,26 +334,26 @@ contract EthenaMinting is IEthenaMinting, SingleAdminAccessControl, ReentrancyGu
   }
 
   /// @notice Removes an custodian from the custodian address list
-  function removeCustodianAddress(address custodian) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  function removeCustodianAddress(address custodian) external onlyRole(DEFAULT_ADMIN_ROLE) firewallProtected {
     if (!_custodianAddresses.remove(custodian)) revert InvalidCustodianAddress();
     emit CustodianAddressRemoved(custodian);
   }
 
   /// @notice Removes the minter role from an account, this can ONLY be executed by the gatekeeper role
   /// @param minter The address to remove the minter role from
-  function removeMinterRole(address minter) external onlyRole(GATEKEEPER_ROLE) {
+  function removeMinterRole(address minter) external onlyRole(GATEKEEPER_ROLE) firewallProtected {
     _revokeRole(MINTER_ROLE, minter);
   }
 
   /// @notice Removes the redeemer role from an account, this can ONLY be executed by the gatekeeper role
   /// @param redeemer The address to remove the redeemer role from
-  function removeRedeemerRole(address redeemer) external onlyRole(GATEKEEPER_ROLE) {
+  function removeRedeemerRole(address redeemer) external onlyRole(GATEKEEPER_ROLE) firewallProtected {
     _revokeRole(REDEEMER_ROLE, redeemer);
   }
 
   /// @notice Removes the collateral manager role from an account, this can ONLY be executed by the gatekeeper role
   /// @param collateralManager The address to remove the collateralManager role from
-  function removeCollateralManagerRole(address collateralManager) external onlyRole(GATEKEEPER_ROLE) {
+  function removeCollateralManagerRole(address collateralManager) external onlyRole(GATEKEEPER_ROLE) firewallProtected {
     _revokeRole(COLLATERAL_MANAGER_ROLE, collateralManager);
   }
 

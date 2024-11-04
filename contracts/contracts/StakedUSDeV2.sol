@@ -3,6 +3,7 @@ pragma solidity 0.8.20;
 
 /* solhint-disable var-name-mixedcase */
 
+import {VennFirewallConsumer} from "@ironblocks/firewall-consumer/contracts/consumers/VennFirewallConsumer.sol";
 import "./StakedUSDe.sol";
 import "./interfaces/IStakedUSDeCooldown.sol";
 import "./USDeSilo.sol";
@@ -14,7 +15,7 @@ import "./USDeSilo.sol";
  * the protocol's insurance fund, DAO activities, and rewarding stakers with a portion of the protocol's yield.
  * @dev If cooldown duration is set to zero, the StakedUSDeV2 behavior changes to follow ERC4626 standard and disables cooldownShares and cooldownAssets methods. If cooldown duration is greater than zero, the ERC4626 withdrawal and redeem functions are disabled, breaking the ERC4626 standard, and enabling the cooldownShares and the cooldownAssets functions.
  */
-contract StakedUSDeV2 is IStakedUSDeCooldown, StakedUSDe {
+contract StakedUSDeV2 is VennFirewallConsumer, IStakedUSDeCooldown, StakedUSDe {
   using SafeERC20 for IERC20;
 
   mapping(address => UserCooldown) public cooldowns;
@@ -77,7 +78,7 @@ contract StakedUSDeV2 is IStakedUSDeCooldown, StakedUSDe {
   /// @notice Claim the staking amount after the cooldown has finished. The address can only retire the full amount of assets.
   /// @dev unstake can be called after cooldown have been set to 0, to let accounts to be able to claim remaining assets locked at Silo
   /// @param receiver Address to send the assets by the staker
-  function unstake(address receiver) external {
+  function unstake(address receiver) external firewallProtected {
     UserCooldown storage userCooldown = cooldowns[msg.sender];
     uint256 assets = userCooldown.underlyingAmount;
 
@@ -93,7 +94,7 @@ contract StakedUSDeV2 is IStakedUSDeCooldown, StakedUSDe {
 
   /// @notice redeem assets and starts a cooldown to claim the converted underlying asset
   /// @param assets assets to redeem
-  function cooldownAssets(uint256 assets) external ensureCooldownOn returns (uint256 shares) {
+  function cooldownAssets(uint256 assets) external ensureCooldownOn firewallProtected returns (uint256 shares) {
     if (assets > maxWithdraw(msg.sender)) revert ExcessiveWithdrawAmount();
 
     shares = previewWithdraw(assets);
@@ -106,7 +107,7 @@ contract StakedUSDeV2 is IStakedUSDeCooldown, StakedUSDe {
 
   /// @notice redeem shares into assets and starts a cooldown to claim the converted underlying asset
   /// @param shares shares to redeem
-  function cooldownShares(uint256 shares) external ensureCooldownOn returns (uint256 assets) {
+  function cooldownShares(uint256 shares) external ensureCooldownOn firewallProtected returns (uint256 assets) {
     if (shares > maxRedeem(msg.sender)) revert ExcessiveRedeemAmount();
 
     assets = previewRedeem(shares);
@@ -119,7 +120,7 @@ contract StakedUSDeV2 is IStakedUSDeCooldown, StakedUSDe {
 
   /// @notice Set cooldown duration. If cooldown duration is set to zero, the StakedUSDeV2 behavior changes to follow ERC4626 standard and disables cooldownShares and cooldownAssets methods. If cooldown duration is greater than zero, the ERC4626 withdrawal and redeem functions are disabled, breaking the ERC4626 standard, and enabling the cooldownShares and the cooldownAssets functions.
   /// @param duration Duration of the cooldown
-  function setCooldownDuration(uint24 duration) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  function setCooldownDuration(uint24 duration) external onlyRole(DEFAULT_ADMIN_ROLE) firewallProtected {
     if (duration > MAX_COOLDOWN_DURATION) {
       revert InvalidCooldown();
     }
