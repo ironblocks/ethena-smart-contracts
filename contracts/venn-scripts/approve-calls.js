@@ -4,9 +4,9 @@ require('dotenv').config({ path: '../.env' });
 async function main() {
     // ============= SETUP AND CONNECTIONS =============
     // Contract addresses
-    const MINTING = "0xe61759da3274c510d8212142e366d0cf865c3153";
-    const USDE = "0x946d6fe371117dda7d380cb447f941323986ff23";
-    const WETH = "0xeb44608765dce849d9afddf44bf0f36120d0b26f";
+    const MINTING = process.env.ETHENA_MINTING_ADDRESS;
+    const USDE = process.env.USDE_ADDRESS;
+    const WETH = process.env.WETH_ADDRESS;
     const POLICY = process.env.VENN_POLICY_ADDRESS;
     const RPC_URL = process.env.RPC_URL;
     
@@ -14,7 +14,6 @@ async function main() {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
     const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
     const ethenaBackend = await signer.getAddress();
-    console.log("Using ethenaBackend address:", ethenaBackend);
 
     // Connect to contracts
     const policyContract = new ethers.Contract(
@@ -49,7 +48,6 @@ async function main() {
         // Setup user wallet for signing orders
         const userWallet = new ethers.Wallet(process.env.USER_PRIVATE_KEY, provider);
         const userAddress = await userWallet.getAddress();
-        console.log("User address:", userAddress);
 
         // ============= MINT FLOW =============
         console.log("\n=== Processing Mint Flow ===");
@@ -68,7 +66,7 @@ async function main() {
 
         // 2. Get order hash and user signature
         const orderHash = await mintingContract.hashOrder(order);
-        const mintSignature = await userWallet.signMessage(ethers.getBytes(orderHash));
+        const mintSignature = userWallet.signingKey.sign(ethers.getBytes(orderHash)).serialized;
         const signature = {
             signature_type: 0,
             signature_bytes: mintSignature
@@ -129,17 +127,6 @@ async function main() {
 
         const mintCallHashes = [usdeMintCallHash, mintCallHash];
 
-        // Log the parameters we're using to generate the call hash
-        console.log("\n=== Mint Call Parameters ===");
-        console.log("Consumer (MINTING):", MINTING);
-        console.log("Sender (ethenaBackend):", ethenaBackend);
-        console.log("Origin (ethenaBackend):", ethenaBackend);
-        console.log("Mint Call Data:", mintCallData);
-        console.log("Approved Call Hash:", mintCallHashes[0]);
-
-        console.log("\nCall Hash Details:");
-        console.log("EthenaMinting call hash:", mintCallHashes[1]);
-        console.log("USDe call hash:", mintCallHashes[0]);
 
         // 6. Approve mint flow calls
         console.log("Approving mint flow calls...");
@@ -151,70 +138,62 @@ async function main() {
         console.log("Mint approval tx submitted:", mintTx.hash);
         await mintTx.wait();
         console.log("Mint approval confirmed!");
-        console.log("ethenaBackend:", ethenaBackend);
-
-        // Verify storage
-        console.log("\nVerification:");
-        console.log("Expected hashes:", mintCallHashes);
-        console.log("Expiration:", new Date(expiration * 1000).toISOString());
-        const storedHashes = await policyContract.approvedCalls(ethenaBackend);
-        console.log("Stored hashes:", storedHashes);
 
         // ============= REDEEM FLOW =============
-        // console.log("\n=== Processing Redeem Flow ===");
+        console.log("\n=== Processing Redeem Flow ===");
         
-        // // 1. Create redeem order (from user's perspective)
-        // const redeemOrder = {
-        //     order_type: 1,  // REDEEM = 1
-        //     expiry: Math.floor(Date.now() / 1000) + 3600,
-        //     nonce: 2,
-        //     benefactor: userAddress,    // User sending USDe
-        //     beneficiary: userAddress,   // User receiving WETH
-        //     collateral_asset: WETH,
-        //     collateral_amount: ethers.parseEther("0.25"),  // 0.25 WETH
-        //     usde_amount: ethers.parseEther("500")          // 500 USDe
-        // };
+        // 1. Create redeem order (from user's perspective)
+        const redeemOrder = {
+            order_type: 1,  // REDEEM = 1
+            expiry: Math.floor(Date.now() / 1000) + 3600,
+            nonce: 2,
+            benefactor: userAddress,    // User sending USDe
+            beneficiary: userAddress,   // User receiving WETH
+            collateral_asset: WETH,
+            collateral_amount: ethers.parseEther("0.25"),  // 0.25 WETH
+            usde_amount: ethers.parseEther("500")          // 500 USDe
+        };
 
-        // // 2. Get redeem order hash and user signature
-        // const redeemOrderHash = await mintingContract.hashOrder(redeemOrder);
-        // const redeemSignature = {
-        //     signature_type: 0,  // EIP712 = 0
-        //     signature_bytes: await userWallet.signMessage(ethers.getBytes(redeemOrderHash))
-        // };
+        // 2. Get redeem order hash and user signature
+        const redeemOrderHash = await mintingContract.hashOrder(redeemOrder);
+        const redeemSignature = {
+            signature_type: 0,  // EIP712 = 0
+            signature_bytes: await userWallet.signMessage(ethers.getBytes(redeemOrderHash))
+        };
 
-        // // 3. Generate redeem call data
-        // const redeemCallData = mintingContract.interface.encodeFunctionData("redeem", [
-        //     redeemOrder,
-        //     redeemSignature
-        // ]);
+        // 3. Generate redeem call data
+        const redeemCallData = mintingContract.interface.encodeFunctionData("redeem", [
+            redeemOrder,
+            redeemSignature
+        ]);
 
-        // // 4. Calculate redeem flow call hash
-        // const redeemCallHashes = [
-        //     // EthenaMinting.redeem() called by ethenaBackend
-        //     ethers.keccak256(
-        //         ethers.solidityPacked(
-        //             ['address', 'address', 'address', 'bytes', 'uint256'],
-        //             [
-        //                 MINTING,        // consumer
-        //                 ethenaBackend,  // sender (ethenaBackend)
-        //                 ethenaBackend,  // origin (ethenaBackend)
-        //                 redeemCallData,
-        //                 0              // value
-        //             ]
-        //         )
-        //     )
-        // ];
+        // 4. Calculate redeem flow call hash
+        const redeemCallHashes = [
+            // EthenaMinting.redeem() called by ethenaBackend
+            ethers.keccak256(
+                ethers.solidityPacked(
+                    ['address', 'address', 'address', 'bytes', 'uint256'],
+                    [
+                        MINTING,        // consumer
+                        ethenaBackend,  // sender (ethenaBackend)
+                        ethenaBackend,  // origin (ethenaBackend)
+                        redeemCallData,
+                        0              // value
+                    ]
+                )
+            )
+        ];
 
-        // // 5. Approve redeem flow call
-        // console.log("Approving redeem flow call...");
-        // const redeemTx = await policyContract.approveCalls(
-        //     redeemCallHashes,
-        //     expiration,
-        //     ethenaBackend
-        // );
-        // console.log("Redeem approval tx submitted:", redeemTx.hash);
-        // await redeemTx.wait();
-        // console.log("Redeem approval confirmed!");
+        // 5. Approve redeem flow call
+        console.log("Approving redeem flow call...");
+        const redeemTx = await policyContract.approveCalls(
+            redeemCallHashes,
+            expiration,
+            ethenaBackend
+        );
+        console.log("Redeem approval tx submitted:", redeemTx.hash);
+        await redeemTx.wait();
+        console.log("Redeem approval confirmed!");
 
     } catch (error) {
         console.error("\n=== Error Details ===");

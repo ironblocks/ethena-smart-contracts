@@ -1,11 +1,11 @@
-import { VennClient } from '@vennbuild/venn-dapp-sdk';
+const { VennClient } = require('@vennbuild/venn-dapp-sdk');
 const { ethers } = require('ethers');
 require('dotenv').config({ path: '../.env' });
 async function main() {
     // ============= SETUP AND CONNECTIONS =============
-    const MINTING = "0xe61759da3274c510d8212142e366d0cf865c3153";
-    const USDE = "0x946d6fe371117dda7d380cb447f941323986ff23";
-    const WETH = "0xeb44608765dce849d9afddf44bf0f36120d0b26f";
+    const MINTING = process.env.ETHENA_MINTING_ADDRESS;
+    const USDE = process.env.USDE_ADDRESS;
+    const WETH = process.env.WETH_ADDRESS;
     
     // Setup Venn client
     const vennURL = process.env.VENN_NODE_URL;
@@ -32,13 +32,26 @@ async function main() {
 
         // 1. User approves USDe spending
         console.log("\nUser approving USDe...");
-        const usdeContract = new ethers.Contract(
+        
+        const usde = new ethers.Contract(
             USDE,
-            ["function approve(address, uint256)", "function balanceOf(address) view returns (uint256)"],
+            ["function allowance(address,address) view returns (uint256)",
+             "function approve(address, uint256)"
+            ],
             user
         );
-        
-        await usdeContract.approve(MINTING, ethers.parseEther("500"));
+
+        // Check allowance before
+        const allowanceBefore = await usde.allowance(await user.getAddress(), MINTING);
+        console.log("USDe allowance before:", ethers.formatEther(allowanceBefore));
+
+        // Make sure approval amount matches what we're trying to redeem
+        const approveTx = await usde.approve(MINTING, ethers.parseEther("500"));
+        await approveTx.wait();
+
+        // Check allowance after
+        const allowanceAfter = await usde.allowance(await user.getAddress(), MINTING);
+        console.log("USDe allowance after:", ethers.formatEther(allowanceAfter));
 
         // 2. Create and sign redeem order as user
         const redeemOrder = {
@@ -54,14 +67,14 @@ async function main() {
 
         const mintingContract = new ethers.Contract(
             MINTING,
-            require('../../out/EthenaMinting.sol/EthenaMinting.json').abi,
+            require('../out/EthenaMinting.sol/EthenaMinting.json').abi,
             provider
         );
 
         const orderHash = await mintingContract.hashOrder(redeemOrder);
         const signature = {
             signature_type: 0,
-            signature_bytes: await user.signMessage(ethers.getBytes(orderHash))
+            signature_bytes: user.signingKey.sign(ethers.getBytes(orderHash)).serialized
         };
 
         // 3. Generate redeem transaction
@@ -86,7 +99,7 @@ async function main() {
 
         // Print balances
         console.log("\n=== Final Balances ===");
-        console.log("User USDe:", await usdeContract.balanceOf(await user.getAddress()));
+        console.log("User USDe:", await usde.balanceOf(await user.getAddress()));
         console.log("User WETH:", await weth.balanceOf(await user.getAddress()));
         console.log("Minting Contract WETH:", await weth.balanceOf(MINTING));
 

@@ -1,93 +1,141 @@
-# Table of contents
+# 🛡️ Ethena + Venn Firewall Integration Demo
 
-- Files within scope of audit
-- Goals of Ethena Protocol
-- Gitbook
-- How we generate yield
-- Maintain delta neutrality
-- Contracts architecture
-- Owner of contracts
+This repository demonstrates the integration of Venn Firewall with Ethena protocol, focusing specifically on USDe minting and redemption flows. The implementation showcases how Venn's transaction firewall can be used to secure and monitor critical DeFi operations.
 
-## Audit scope
-Smart contract files are located in /protocols/USDe/contracts
+## 🚀 Quick Start
 
-`USDe.sol`
-`EthenaMinting.sol` and the contract it extends, `SingleAdminAccessControl.sol`
-`StakedUSDeV2.sol`, the contract it extends, `StakedUSDe.sol` and the additional contract it creates `USDeSilo.sol`
+1. Clone this repository
+2. Install dependencies:
+   ```bash
+   cd contracts
+   forge install
+   ```
+3. Install node dependencies:
+   ```bash
+   cd contracts/venn-scripts
+   npm install
+   ```
+4. Set up your environment variables (see [Environment Setup](#️-environment-setup))
+5. Follow the deployment and execution flow below
 
-## Gitbook
-To get an overview of Ethena, please visit our gitbook: https://ethena-labs.gitbook.io/ethena-labs
+## 🔄 Deployment and Execution Flow
 
-## Goal
+### 1. Deploy Contracts
+```bash
+forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast
+```
+This deploys the Ethena contracts to the network.
 
-Ethena's synthetic dollar, USDe, will provide the first censorship resistant, scalable and stable crypto-native solution for money achieved by delta-hedging staked Ethereum collateral. USDe will be fully backed transparently onchain and free to compose throughout DeFi.
+### 2. Set up Venn CLI and Environment
+```bash
+# Install Venn CLI globally
+npm i -g @vennbuild/cli
+```
+Set up your environment variables and create venn.config.json (see [Environment Setup](#-environment-setup) and [Venn Configuration](#-venn-configuration))
 
-## How Ethena generated yield
+### 3. Enable Venn Policy
+```bash
+venn enable --network holesky
+```
+Add the generated policy address to your venn.config.json under the "ApprovedCalls" field.
 
-Users mint USDe and Ethena opens an equivalent short ETH perps position on perps exchanges. stETH yields 3-4% annualized, while short ETH perps yield 6-8%. The combined long and short position daily yield is sent to an insurance fund, and then sent to the staking contract every 8 hours.
+### 4. Grant Signer Role
+```bash
+node contracts/venn-scripts/grant-signer.js
+```
+Grants the signer role to the deployer, enabling them to approve calls to the Venn Firewall policy.
 
-## How we maintain delta neutrality
+### 5. Approve Calls
+```bash
+node contracts/venn-scripts/approve-calls.js
+```
+Approves the necessary calls to the Venn Firewall policy. This is required before any minting or redemption can occur.
 
-The long stETH and short ETH perps creates a position with value that's fixed to the time of it's creation. Imagine ETH = $2000, user sends in 10 stETH to mint 20000 USDe, and Ethena shorts 10 ETH worth of perps.
+### 6. Mint USDe
+```bash
+node contracts/venn-scripts/mint.js
+```
+Executes the minting flow:
+- WETH wrapping from ETH
+- WETH approval for Ethena staking contract
+- USDe minting through Venn Firewall
 
-If the market goes down 90%, the long 10 stETH position is now worth $2000, down from $20000. While the short 10 ETH perps position has an unrealized P&L of $18000. If the user wishes to redeem his USDe, the short perps position can be closed to realize $18000 of profits, and buy 90 stETH. Along with the original 10 stETH, the user is returned 100 stETH, also worth $20000.
+### 7. Redeem USDe
+```bash
+node contracts/venn-scripts/redeem.js
+```
+Executes the redemption flow:
+- USDe approval for redemption
+- Redemption process through Venn Firewall
+- WETH unwrapping to ETH
 
-## Our 3 Smart contracts
+## 🔍 Scope
 
-### USDe.sol
+This demo focuses on the following Ethena protocol operations:
+- USDe minting process
+- Token approvals
+- USDe redemption flow
 
-`USDe.sol` is the contract of our stablecoin. It extends `ERC20Burnable`, `ERC20Permit` and `Ownable2Step` from Open Zepplin. There's a single variable, the `minter` address that can be modified by the `OWNER`. Outside of `Ownable2Step` contract owner only has one custom function, the ability to set the `minter` variable to any address.
+## 📁 Modified Files with Venn Integration
 
-The `minter` address is the only address that has the ability to mint USDe. This minter address has one of the most powerful non-owner permissions, the ability to create an unlimited amount of USDe. It will always be pointed to the `EthenaMinting.sol` contract.
+The following files have been customized to incorporate Venn Firewall:
 
-### EthenaMinting.sol
+- `contracts/contracts/EthenaMinting.sol`
+- `contracts/contracts/USDe.sol`
 
-`EthenaMinting.sol` is the contract and address that the `minter` variable in `USDe.sol` points to. When users mint USDe with stETH (or other collateral) or redeems collateral for USDe, this contract is invoked.
+## 🔗 Example Transactions (Holesky Testnet)
 
-The primary functions used in this contract is `mint()` and `redeen()`. Users who call this contract are all within Ethena. When outside users wishes to mint or redeem, they perform an EIP712 signature based on an offchain price we provided to them. They sign the order and sends it back to Ethena's backend, where we run a series of checks and are the ones who take their signed order and put them on chain.
+View example transactions of the integration in action on Holesky testnet:
 
-By design, Ethena will be the only ones calling `mint()`,`redeen()` and other functions in this contract.
+- USDe Minting: [0xd672f06c9d518de1e918b0f138d8636f7fa74dc39c3617aa6e60f0903cfe8003](https://holesky.etherscan.io/tx/0xd672f06c9d518de1e918b0f138d8636f7fa74dc39c3617aa6e60f0903cfe8003)
+- USDe Redemption: [0x20ff955f7ffabf9123bb5667d183cf2f8fb0ab66eb0c16b27787bc6252b8fc56](https://holesky.etherscan.io/tx/0x20ff955f7ffabf9123bb5667d183cf2f8fb0ab66eb0c16b27787bc6252b8fc56)
 
-### Minting
+These transactions are examples of successful minting and redemption flows. They are only possible if the necessary calls are approved to the venn policy, and the transactions are sent through the Venn dApp SDK.
 
-In the `mint()` function, `order` and `signature` parameters comes from users who wishes to mint and performed the EIP 712 signature. `route` is generated by Ethena, where it defines where the incoming collateral from users go to. The address in `route` we defined must be inside `_custodianAddresses` as a safety check, to ensure funds throughout the flow from users end up in our custodians within a single transaction. Only `DEFAULT_ADMIN_ROLE` can add custodian address.
+## ⚙️ Environment Setup
 
-### Redeeming
+Create a `.env` file in the `contracts` directory with the following:
 
-Similar to minting, user performs an EIP712 signature with prices Ethena defined. We then submit their signature and order into `redeem()` function. The funds from redemption comes from the Ethena minting contract directly. Ethena aims to hold between $100k-$200k worth of collateral at all times for hot redemptions. This mean for users intending to redeem a large amount, they will need to redeem over several blocks. Alternatively they can sell USDe on the open market.
+```env
+# Network
+PRIVATE_KEY=your_private_key
+USER_PRIVATE_KEY=your_user_private_key // for signing orders
+RPC_URL=your_holesky_rpc_url
+VENN_NODE_URL=venn_node_url
+VENN_PRIVATE_KEY=your_venn_api_key // should be the same as deployer private key
+ETHENA_MINTING_ADDRESS=ethena_minting_address
+USDE_ADDRESS=usde_address
+WETH_ADDRESS=weth_address
+```
 
-### Setting delegated signer
+## 🔐 Venn Configuration
 
-Some users trade through smart contracts. Ethena minting has the ability to delegate signers to sign for an address, using `setDelegatedSigner`. The smart contract should call this function with the desired EOA address to delegate signing to. To remove delegation, call `removeDelegatedSigner`. Multiple signers can be delegated at once, and it can be used by EOA addresses as well.
+Create a `venn.config.json` file containing firewall configurations for:
 
-By setting a delegated signer, the smart contract allows both the `order.benefactor` and delegated signed to be the address that's ecrecovered from the order and signature, rather than just `order.benefactor`.
+```json
+{
+  "networks": {
+    "holesky": {
+        "EthenaMinting": "...", // EthenaMinting contract address
+        "USDe": "..." // USDe contract address
+    },
+    "ApprovedCalls": "..." // address of the deployed policy
+  }
+}
+```
 
-#### Security
+## 📚 Resources
 
-`EthenaMinting.sol` have crucial roles called the `MINTER` and `REDEEMER`. Starting with `MINTER`, in our original design, they have the ability to mint any amount of USDe for any amount of collateral. Given `MINTER` is a hot wallet and is an EOA address, we considered the scenario where this key becomes compromised. An attacker could then mint a billion USDe for no collateral, and dump them on pools, causing a black swan event our insurance fund cannot cover.
+- [Venn Firewall Documentation](https://docs.venn.build)
+- [Ethena Documentation](https://docs.ethena.fi)
 
-Our solution is to enforce an on chain mint and redeem limitation of 100k USDe per block. In addition, we have `GATEKEEPER` roles with the ability to disable mint/redeems and remove `MINTERS`,`REDEEMERS`. `GATEKEEPERS` acts as a safety layer in case of compromised `MINTER`/`REDEEMER`. They will be run in seperate AWS accounts not tied to our organisation, constantly checking each transaction on chain and disable mint/redeems on detecting transactions at prices not in line with the market. In case compromised `MINTERS` or `REDEEMERS` after this security implementation, a hacker can at most mint 100k USDe for no collateral, and redeem all the collateral within the contract (we will hold ~$200k max), for a max loss of $300k in a single block, before `GATEKEEPER` disable mint and redeem. The $300k loss will not materialy affect our operations.
+## ⚠️ Important Notes
 
-Further down the line, there has been considerations to give external organisations a `GATEKEEPER` role. We expect the external organisations to only invoke the gatekeeper functions when price errors occur on chain. Abuse of this prvileage means their `GATEKEEPER` role will be removed.
+- This is a demonstration project - test thoroughly before production use
+- Ensure proper environment variables are set
+- Monitor Venn Firewall logs for security alerts
+- All transactions are executed through Venn's secure infrastructure
 
-The `DEFAULT_ADMIN_ROLE`, also our ethena multisig, is required to re-enable minting/redeeming. `DEFAULT_ADMIN_ROLE` also has the power to add/remove `GATEKEEPERS`,`MINTER` and `REDEEMER`.
+## 📧 Contact
 
-`DEFAULT_ADMIN_ROLE` is the most powerful role in the minting contract, but is still beneath the `OWNER` role of `USDe.sol`, given that the owner can remove the minting contract's privilege to mint.
-
-### StakedUSDeV2.sol
-
-`StakedUSDeV2.sol` is where holders of USDe stablecoin can stake their stablecoin, get stUSDe in return and earn yield. Our protocol's yield is paid out by having a `REWARDER` role of the staking contract send yield in USDe, increasing the stUSDe value with respect to USDe.
-
-This contract is a modification of the ERC4626 standard, with a change to vest in rewards linearly over 8 hours to prevent users frontrunning the payment of yield, then unwinding their position right after (or even in the same block). This is also the reason for `REWARDER` role. Otherwise users can be denied rewards if random addresses send in 1 wei and modifies the rate of reward vesting.
-
-There's also an additional change to add a 14 day cooldown period on unstaking stUSDe. When the unstake process is initiated, from the user's perspective, stUSDe is burnt immediately, and they will be able to invoke the withdraw function after cooldown is up to get their USDe in return. Behind the scenes, on burning of stUSDe, USDe is sent to a seperate silo contract to hold the funds for the cooldown period. And on withdrawal, the staking contract moves user funds from silo contract out to the user's address. The cooldown is configurable up to 90 days.
-
-Due to legal requirements, there's a `SOFT_RESTRICTED_STAKER_ROLE` and `FULL_RESTRICTED_STAKER_ROLE`. The former is for addresses based in countries we are not allowed to provide yield to, for example USA. Addresses under this category will be soft restricted. They cannot deposit USDe to get stUSDe or withdraw stUSDe for USDe. However they can participate in earning yield by buying and selling stUSDe on the open market.
-
-`FULL_RESTRCITED_STAKER_ROLE` is for sanction/stolen funds, or if we get a request from law enforcement to freeze funds. Addresses fully restricted cannot move their funds, and only Ethena can unfreeze the address. Ethena also have the ability to repossess funds of an address fully restricted. We understand having the ability to freeze and repossess funds of any address Ethena choose could be a cause of concern for defi users decisions to stake USDe. While we aim to make our operations as secure as possible, interacting with Ethena still requires a certain amount of trust in our organisation outside of code on the smart contract, given the tie into cefi to earn yield.
-
-Note this restriction only applied to staking contract, there are no restrictions or ability to freeze funds of the USDe stablecoin, unlike USDC.
-
-## Owner of Ethena's smart contracts
-
-Ethena utilises a gnosis safe multisig to hold ownership of its smart contracts. All multisig keys are cold wallets. We will require 7/10 or more confirmations before transactions are approved. This multisig is purely for the purpose of owning the smart contracts, and will not hold funds or do other on chain actions.
+For any questions or support, reach out to our integrator on telegram - [@x0b501e7e](https://t.me/x0b501e7e)
