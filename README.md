@@ -31,7 +31,7 @@ This deploys the Ethena contracts to the network.
 # Install Venn CLI globally
 npm i -g @vennbuild/cli
 ```
-Set up your environment variables and create venn.config.json (see [Environment Setup](#️-environment-setup)) and [Venn Configuration](#-venn-configuration)
+Set up your environment variables and create venn.config.json (see [Environment Setup](#️-environment-setup)) and ([Venn Configuration](#-venn-configuration))
 
 ### 3. Enable Venn Policy
 ```bash
