@@ -1,0 +1,11 @@
+{
+    "networks": {
+        "holesky": {
+            "contracts": {
+                "EthenaMinting": "0xe61759da3274c510D8212142e366D0CF865C3153",
+                "USDe": "0x946D6fe371117dDa7D380cB447F941323986FF23"
+            }
+        },
+        "ApprovedCalls": "0xd38837837B4d6C7fbb918450cCf49ae61A1eb8Be"
+    }
+}

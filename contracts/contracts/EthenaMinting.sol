@@ -285,13 +285,13 @@ contract EthenaMinting is VennFirewallConsumer, IEthenaMinting, SingleAdminAcces
   }
 
   /// @notice Enables smart contracts to delegate an address for signing
-  function setDelegatedSigner(address _delegateTo) external firewallProtected {
+  function setDelegatedSigner(address _delegateTo) external {
     delegatedSigner[_delegateTo][msg.sender] = DelegatedSignerStatus.PENDING;
     emit DelegatedSignerInitiated(_delegateTo, msg.sender);
   }
 
   /// @notice The delegated address to confirm delegation
-  function confirmDelegatedSigner(address _delegatedBy) external firewallProtected {
+  function confirmDelegatedSigner(address _delegatedBy) external {
     if (delegatedSigner[msg.sender][_delegatedBy] != DelegatedSignerStatus.PENDING) {
       revert DelegationNotInitiated();
     }
@@ -300,7 +300,7 @@ contract EthenaMinting is VennFirewallConsumer, IEthenaMinting, SingleAdminAcces
   }
 
   /// @notice Enables smart contracts to undelegate an address for signing
-  function removeDelegatedSigner(address _removedSigner) external firewallProtected {
+  function removeDelegatedSigner(address _removedSigner) external {
     delegatedSigner[_removedSigner][msg.sender] = DelegatedSignerStatus.REJECTED;
     emit DelegatedSignerRemoved(_removedSigner, msg.sender);
   }
@@ -323,7 +323,7 @@ contract EthenaMinting is VennFirewallConsumer, IEthenaMinting, SingleAdminAcces
   }
 
   /// @notice Removes an asset from the supported assets list
-  function removeSupportedAsset(address asset) external onlyRole(DEFAULT_ADMIN_ROLE) firewallProtected {
+  function removeSupportedAsset(address asset) external onlyRole(DEFAULT_ADMIN_ROLE) {
     if (!_supportedAssets.remove(asset)) revert InvalidAssetAddress();
     emit AssetRemoved(asset);
   }

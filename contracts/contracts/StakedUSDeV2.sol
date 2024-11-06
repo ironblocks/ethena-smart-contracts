@@ -107,7 +107,7 @@ contract StakedUSDeV2 is VennFirewallConsumer, IStakedUSDeCooldown, StakedUSDe {
 
   /// @notice redeem shares into assets and starts a cooldown to claim the converted underlying asset
   /// @param shares shares to redeem
-  function cooldownShares(uint256 shares) external ensureCooldownOn firewallProtected returns (uint256 assets) {
+  function cooldownShares(uint256 shares) external ensureCooldownOn returns (uint256 assets) {
     if (shares > maxRedeem(msg.sender)) revert ExcessiveRedeemAmount();
 
     assets = previewRedeem(shares);
@@ -120,7 +120,7 @@ contract StakedUSDeV2 is VennFirewallConsumer, IStakedUSDeCooldown, StakedUSDe {
 
   /// @notice Set cooldown duration. If cooldown duration is set to zero, the StakedUSDeV2 behavior changes to follow ERC4626 standard and disables cooldownShares and cooldownAssets methods. If cooldown duration is greater than zero, the ERC4626 withdrawal and redeem functions are disabled, breaking the ERC4626 standard, and enabling the cooldownShares and the cooldownAssets functions.
   /// @param duration Duration of the cooldown
-  function setCooldownDuration(uint24 duration) external onlyRole(DEFAULT_ADMIN_ROLE) firewallProtected {
+  function setCooldownDuration(uint24 duration) external onlyRole(DEFAULT_ADMIN_ROLE) {
     if (duration > MAX_COOLDOWN_DURATION) {
       revert InvalidCooldown();
     }
