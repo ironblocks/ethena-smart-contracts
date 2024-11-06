@@ -2,10 +2,9 @@
     "networks": {
         "holesky": {
             "contracts": {
-                "EthenaMinting": "0xe61759da3274c510D8212142e366D0CF865C3153",
-                "USDe": "0x946D6fe371117dDa7D380cB447F941323986FF23"
+                "EthenaMinting": "0x01A6C2cd3f9F2B6e491389907b48DBeE40919f89",
+                "USDe": "0x67df56d2DEc72Fb9c6AE83b55DE82c1455fe5731"
             }
-        },
-        "ApprovedCalls": "0xd38837837B4d6C7fbb918450cCf49ae61A1eb8Be"
+        }
     }
 }

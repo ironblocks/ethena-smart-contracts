@@ -4,8 +4,8 @@ require('dotenv').config({ path: '../.env' });
 
 async function main() {
     // ============= SETUP AND CONNECTIONS =============
-    const MINTING = "0xe61759da3274c510d8212142e366d0cf865c3153";
-    const USDE = "0x946d6fe371117dda7d380cb447f941323986ff23";
+    const MINTING = "0x01A6C2cd3f9F2B6e491389907b48DBeE40919f89";
+    const USDE = "0x67df56d2DEc72Fb9c6AE83b55DE82c1455fe5731";
     const WETH = "0xeb44608765dce849d9afddf44bf0f36120d0b26f";
     
     // Setup Venn client
@@ -51,7 +51,7 @@ async function main() {
         const orderHash = await mintingContract.hashOrder(order);
         const signature = {
             signature_type: 0,
-            signature_bytes: await user.signMessage(ethers.getBytes(orderHash))
+            signature_bytes: user.signingKey.sign(ethers.getBytes(orderHash)).serialized
         };
 
         // 3. Create route for collateral
@@ -80,7 +80,9 @@ async function main() {
         console.log("Full transaction data:", approvedMintTx.data);
 
         console.log("Executing mint transaction...");
-        const receipt = await ethenaBackend.sendTransaction(approvedMintTx);
+        // return;
+        const receipt = await ethenaBackend.sendTransaction({ ...approvedMintTx, gasLimit: 2000000 });
+        // const receipt = await ethenaBackend.sendTransaction(approvedMintTx);
         await receipt.wait();
         console.log("Mint completed!");
 
