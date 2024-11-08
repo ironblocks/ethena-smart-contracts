@@ -39,17 +39,6 @@ venn enable --network holesky
 ```
 Add the generated policy address to your venn.config.json under the "ApprovedCalls" field.
 
-### 4. Grant Signer Role
-```bash
-node contracts/venn-scripts/grant-signer.js
-```
-Grants the signer role to the deployer, enabling them to approve calls to the Venn Firewall policy.
-
-### 5. Approve Calls
-```bash
-node contracts/venn-scripts/approve-calls.js
-```
-Approves the necessary calls to the Venn Firewall policy. This is required before any minting or redemption can occur.
 
 ### 6. Mint USDe
 ```bash
@@ -90,7 +79,7 @@ View example transactions of the integration in action on Holesky testnet:
 - USDe Minting: [0xd672f06c9d518de1e918b0f138d8636f7fa74dc39c3617aa6e60f0903cfe8003](https://holesky.etherscan.io/tx/0xd672f06c9d518de1e918b0f138d8636f7fa74dc39c3617aa6e60f0903cfe8003)
 - USDe Redemption: [0x20ff955f7ffabf9123bb5667d183cf2f8fb0ab66eb0c16b27787bc6252b8fc56](https://holesky.etherscan.io/tx/0x20ff955f7ffabf9123bb5667d183cf2f8fb0ab66eb0c16b27787bc6252b8fc56)
 
-These transactions are examples of successful minting and redemption flows. They are only possible if the necessary calls are approved to the venn policy, and the transactions are sent through the Venn dApp SDK.
+These transactions are examples of successful minting and redemption flows. They are only possible if the necessary calls are approved and the transactions are sent through the Venn dApp SDK.
 
 ## ⚙️ Environment Setup
 
